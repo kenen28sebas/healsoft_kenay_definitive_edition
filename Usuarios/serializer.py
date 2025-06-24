@@ -69,17 +69,24 @@ class Gestor_thSerializador(serializers.ModelSerializer):
         return gestor_th
     
 class PacienteSerializador(serializers.ModelSerializer):
-    usuario = UsuarioSerializer(read_only=True)
+    usuario = UsuarioSerializer()
 
     class Meta:
         model = Paciente
         fields = "__all__"
 
     def create(self, validated_data):
+        print("Datos del paciente: 1", validated_data)
         usuario_data = validated_data.pop('usuario')
+        print("sdasd",usuario_data)
         usuario_exist = Usuario.objects.filter(
-            nro_doc=usuario_data.nro_doc,
+            nro_doc=usuario_data['nro_doc'],
         ).first()
+        if not usuario_exist:
+            usuario=UsuarioSerializer.create(UsuarioSerializer(),validated_data=usuario_data)
+            token, created = Token.objects.get_or_create(user=usuario)
+            paciente = Paciente.objects.create(usuario=usuario, **validated_data)  # Crear el paciente
+            return paciente
         token, created = Token.objects.get_or_create(user=usuario_exist)  # Crear token para el usuario
         paciente = Paciente.objects.create(usuario=usuario_exist, **validated_data)  # Crear el paciente
         return paciente

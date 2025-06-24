@@ -75,15 +75,15 @@ class Gestor_TH(models.Model):
 
 
 class Paciente(models.Model):
-    ocupacion = models.CharField(max_length=100, null=False, blank=False, verbose_name='Ocupacion')
+    ocupacion = models.CharField(max_length=100, null=True, blank=False, verbose_name='Ocupacion')
     REG = [
         ('RC', 'Régimen Contributivo'),
         ('RS', 'Régimen Subsidiado'),
         ('RE', 'Régimen Especial'),
         ('PA', 'Particular')
     ]
-    regimen = models.CharField(max_length=10, null=False, blank=False, choices=REG )
-    eps = models.CharField(max_length=100, null=False, blank=False, verbose_name='EPS')
+    regimen = models.CharField(max_length=10, null=True, blank=False, choices=REG )
+    eps = models.CharField(max_length=100, null=True, blank=False, verbose_name='EPS')
     ES = [
         ('1', 'Estrato 1'),
         ('2', 'Estrato 2'),
@@ -92,7 +92,7 @@ class Paciente(models.Model):
         ('5', 'Estrato 5'),
         ('6', 'Estrato 6')
     ]
-    estrato = models.CharField(max_length=1, null=False, blank=False, verbose_name='Estrato', choices=ES)
+    estrato = models.CharField(max_length=1, null=True, blank=False, verbose_name='Estrato', choices=ES)
     # TIPO_A = [
     #     ('COT', 'Cotizante'),
     #     ('BEN', 'Beneficiario'),
@@ -106,7 +106,7 @@ class Paciente(models.Model):
         ('D', 'Desplazado'),
         ('O', 'Otro')
     ]
-    grupo_atencion_especial = models.CharField(max_length=1, null=False, blank=False, verbose_name='Grupo de Atención Especial', choices=GRUPO_A_E)
+    grupo_atencion_especial = models.CharField(max_length=1, null=True, blank=False, verbose_name='Grupo de Atención Especial', choices=GRUPO_A_E)
     GRPO_SANG = [
         ('A+', 'A Positivo'),
         ('A-', 'A Negativo'),
@@ -117,7 +117,7 @@ class Paciente(models.Model):
         ('O+', 'O Positivo'),
         ('O-', 'O Negativo')
     ]
-    grupo_sanguineo = models.CharField(max_length=3, null= False, blank= False, verbose_name='RH', choices=GRPO_SANG)
+    grupo_sanguineo = models.CharField(max_length=3, null= True, blank= False, verbose_name='RH', choices=GRPO_SANG)
     usuario=models.ForeignKey(Usuario,on_delete=models.CASCADE)
     
 # class Gerente(models.Model) :

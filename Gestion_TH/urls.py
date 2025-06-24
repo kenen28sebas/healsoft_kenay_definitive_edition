@@ -17,6 +17,6 @@ router.register(r'agenda-mes', AgendaMesViewSet, basename="agenda-mes")
 
 
 urlpatterns = [
-    path('',include(router.urls)),
+    path('',include(router.urls))
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

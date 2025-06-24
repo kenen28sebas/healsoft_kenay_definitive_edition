@@ -60,12 +60,13 @@ def registrar_paciente(request):
         validate_password(password=password)
     except Exception as e:
         # Si la validación falla, devolver un error
-        return Response({"error": str(e)}, status=400)
+        return Response({"error": str(e),"s":"s"}, status=400)
     if 'tipo_usuario' not in request.data or request.data['tipo_usuario'] != 'paciente':
         return Response({"error": "El campo 'tipo_usuario' debe ser 'paciente'"}, status=400)
     # Se crea el serializer correspondiente al tipo de usuario
+    print("Datos del paciente:", request.data)
     serializer=PacienteSerializador(data= request.data)
-    
+    print(serializer.is_valid())
     if serializer.is_valid(): 
         print("Datos del paciente: 1", usuario)
         data_solicitud = {
@@ -73,7 +74,6 @@ def registrar_paciente(request):
             'codigo_verificacion': generar_codigo_verificacion()  # Generar un código de verificación
         }
         solicitud_serializer = SolicitudContrasenaSerializador(data=data_solicitud)
-        print("Datos del paciente: 2", data_solicitud)
         serializer.save()
         if not solicitud_serializer.is_valid():
             print("Errores de validación de solicitud:", solicitud_serializer.errors)
@@ -128,7 +128,7 @@ def activar_usuario(request):
     # Activar un paciente
     try:
         codigo_verificacion = request.data.get('codigo_verificacion')
-        codigo = Solicitud_contrasena.objects.get(codigo_verificacion=codigo_verificacion)
+        codigo = Solicitud_contrasena.objects.filter(codigo_verificacion=codigo_verificacion).first()
         if not codigo:
             return Response({"error": "Código de verificación no existe"}, status=404)
         if codigo :
@@ -488,6 +488,7 @@ def solicitar_restaurar_contrasena(request):
 
 @api_view(['POST'])
 def restaurar_contrasena(request):
+    print("Datos recibidos:", request.data)
     try:
         codigo_verificacion = request.data.get('codigo_verificacion')
         codigo = Solicitud_contrasena.objects.get(codigo_verificacion=codigo_verificacion)
@@ -522,4 +523,10 @@ def actualizar_datos_usuario(request):
     except Usuario.DoesNotExist:
         return Response({"error": "Usuario no encontrado"}, status=404)    
 
-     
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def lista_medicos(request):     
+    medicos = Medico.objects.all()
+    serializer = MedicoSerializador(medicos, many=True)
+    return Response(serializer.data)

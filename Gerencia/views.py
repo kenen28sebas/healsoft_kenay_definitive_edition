@@ -22,6 +22,7 @@ class CentroMedicoViewset(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsGerente]
     queryset = Centro_medico.objects.all()
     serializer_class = Centro_medicoSerializer
+    http_method_names = ['get','patch','put', 'post']
 
 class ServicioViewset(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication]

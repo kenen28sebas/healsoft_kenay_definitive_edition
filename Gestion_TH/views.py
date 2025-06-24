@@ -12,6 +12,7 @@ from Usuarios.serializer import *
 from .serializer import *
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, schema , authentication_classes, permission_classes
 from datetime import datetime, date, timedelta
 from rest_framework.views import APIView
 from holidays import country_holidays
@@ -727,3 +728,28 @@ class AgendaMesViewSet(viewsets.ModelViewSet):
         agendames.delete()
 
         return Response({"mensaje": "Agenda eliminada correctamente. Ya puedes crear una nueva."}, status=200)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def buscar_usuario_por_documento(request):
+    nro_doc = request.query_params.get('nro_doc')
+    if not nro_doc:
+        return Response({'error': 'Número de documento no proporcionado'}, status=400)
+
+    usuario = Usuario.objects.filter(nro_doc=nro_doc).first()
+    if not usuario:
+        return Response({'existe': False}, status=404)
+
+    serializer = UsuarioSerializer(usuario)
+    return Response({'existe': True, 'usuario': serializer.data}, status=200)
+#esta vista me permite registrar medicos y asociarle su hoja de vida en el momento que se crea el registro
+class HojaVistas(viewsets.ModelViewSet):
+#aqui estoy configurando la vista para trabajar con el modelo medico
+    queryset = Medico.objects.all()
+#hacemos uso del serializador para convertir los datos a json
+    serializer_class = MedicoSerializador
+    authentication_classes =[TokenAuthentication]
+#aqui estoy definiendo los permisos para hacer uso de la vista, haciendo uso del IsAuthenticated y de EsGestorth que es el que verifica que sea un gestor de th
+    permission_classes = [IsAuthenticated,EsGestorth]  
+#con este metodo registro medicos y automaticamente genero su hoja de vida

@@ -6,7 +6,7 @@ from Usuarios.models import Paciente, Medico
 
 class Cita(models.Model):
     fecha_asignacion = models.DateField()
-    fecha_solicitud = models.DateField()
+    fecha_solicitud = models.DateField(auto_now=True)
     estado = models.CharField(max_length=20, choices=[
         ('Pendiente', 'Pendiente'),
         ('Confirmada', 'Confirmada'),
@@ -35,3 +35,5 @@ class Info_cambio(models.Model):
 
     def __str__(self):
         return f"{self.cita} - {self.fecha_cambio} {self.hora_cambio}"
+    
+    

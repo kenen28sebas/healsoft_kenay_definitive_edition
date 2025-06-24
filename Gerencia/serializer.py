@@ -9,7 +9,7 @@ class CupsSerializer(serializers.ModelSerializer):
 class Centro_medicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Centro_medico
-        fields = ['nombre', 'direccion', 'telefono', 'email']
+        fields = ['nit','nombre', 'direccion', 'telefono', 'email']
 
 class ServicioSerializer(serializers.ModelSerializer):
     class Meta:
