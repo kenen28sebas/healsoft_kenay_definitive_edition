@@ -65,8 +65,7 @@ class AgendaDiaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AgendaDia
-        fields = ['id', 'horainico', 'horafin', 'trabajado', 'bloques']
-
+        fields = "__all__"
     def get_trabajado(self, obj):
         return obj.horainico is not None
 
@@ -108,8 +107,7 @@ class AgendaDiaSerializer(serializers.ModelSerializer):
         return bloques
 
 class AgendaMesSerializer(serializers.ModelSerializer):
-    agendadia = AgendaDiaSerializer(many=True, read_only=True)
 
     class Meta:
         model = AgendaMes
-        fields = ['id', 'mes', 'publicado', 'agendadia']
+        fields = ['id', 'mes', 'publicado', 'medico']

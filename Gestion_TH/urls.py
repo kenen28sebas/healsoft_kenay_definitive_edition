@@ -14,6 +14,7 @@ router.register(r'experiencia/laboral',ExperienciVistas, basename="experiencia_l
 router.register(r'solicitudes',SolicitudActualizacionVistas,basename='solicitudes_hoja')
 # router.register(r'cargos',CargoVistas,basename='cargos')
 router.register(r'agenda-mes', AgendaMesViewSet, basename="agenda-mes")
+router.register(r'agenda-dia', AgendaDiaViewSet, basename="agenda-dia")
 
 
 urlpatterns = [

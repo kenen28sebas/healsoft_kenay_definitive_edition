@@ -604,162 +604,54 @@ class EsGerente(IsAuthenticated):
 class AgendaMesViewSet(viewsets.ModelViewSet):
     queryset = AgendaMes.objects.prefetch_related('agendadia').all()
     serializer_class = AgendaMesSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
+    def create(self, request):
+        print(request.data)
         try:
-            medico = Medico.objects.get(usuario=user)
-            return AgendaMes.objects.filter(medico=medico)
-        except Medico.DoesNotExist:
-            return AgendaMes.objects.none()
+            nro_doc = request.data.get("nro_doc")
+            mes_raw = request.data.get("mes")  # Esperado: "2025-08" o "2025-08-01"
 
-    @action(detail=False, methods=['post'], url_path='generar-agenda')
-    @transaction.atomic
-    def generar_agenda_preview(self, request):
-        usuario = request.user
+            if not nro_doc or not mes_raw:
+                return Response({"error": "Faltan datos obligatorios: 'nro_doc' o 'mes'."},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            medico = Medico.objects.get(usuario=usuario)
-        except Medico.DoesNotExist:
-            return Response({"error": "No se encontró el médico."}, status=404)
+            # Buscar el médico
+            medico = Medico.objects.filter(usuario__nro_doc=nro_doc).first()
+            if not medico:
+                return Response({"error": "No se encontró el médico con ese número de documento."},
+                                status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            hora_inicio = datetime.strptime(request.data["horainico"], "%H:%M").time()
-            hora_fin = datetime.strptime(request.data["horafin"], "%H:%M").time()
-            hora_almuerzo = datetime.strptime(request.data["horaalmuerzo"], "%H:%M").time()
-            dias_libres = [datetime.strptime(d, "%Y-%m-%d").date() for d in request.data["dias_libres"]]
-            mes_objetivo = datetime.strptime(request.data["mes"], "%Y-%m-%d").date()
-        except (KeyError, ValueError):
-            return Response({"error": "Parámetros inválidos. Asegúrate de enviar 'mes', 'horainico', 'horafin', 'horaalmuerzo', 'dias_libres'."}, status=400)
+            # Formatear fecha a un objeto datetime.date
+            try:
+                fecha_mes = datetime.strptime(mes_raw[:10], "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    fecha_mes = datetime.strptime(mes_raw[:7], "%Y-%m").date()
+                except ValueError:
+                    return Response({"error": "Formato de fecha inválido. Usa 'YYYY-MM' o 'YYYY-MM-DD'."},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-        duraciones = {
-            "Medicina General": 20,
-            "Odontología": 30,
-            "Laboratorios": 20
-        }
-        duracion = duraciones.get(medico.especialidad, 20)
-
-        resultado = []
-        fecha = mes_objetivo.replace(day=1)
-        mes_actual = fecha.month
-
-        while fecha.month == mes_actual:
-            es_dia_libre = fecha in dias_libres
-
-            dia_info = {
-                "fecha": fecha.isoformat(),
-                "es_dia_libre": es_dia_libre,
-                "bloques": []
+            # Construir los datos
+            data = {
+                "medico": medico.id,
+                "mes": fecha_mes,
+                "publicado": True
             }
 
-            if not es_dia_libre:
-                hora_actual = datetime.combine(fecha, hora_inicio)
-                fin_jornada = datetime.combine(fecha, hora_fin)
-                almuerzo_inicio = datetime.combine(fecha, hora_almuerzo)
-                almuerzo_fin = almuerzo_inicio + timedelta(hours=1)
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-                while hora_actual + timedelta(minutes=duracion) <= fin_jornada:
-                    if not (almuerzo_inicio <= hora_actual < almuerzo_fin):
-                        bloque = {
-                            "inicio": hora_actual.time().strftime("%H:%M"),
-                            "fin": (hora_actual + timedelta(minutes=duracion)).time().strftime("%H:%M")
-                        }
-                        dia_info["bloques"].append(bloque)
-                    hora_actual += timedelta(minutes=duracion)
-
-            resultado.append(dia_info)
-            fecha += timedelta(days=1)
-
-        return Response({
-            "especialidad": medico.especialidad,
-            "duracion_bloque": f"{duracion} minutos",
-            "hora_inicio": hora_inicio.strftime("%H:%M"),
-            "hora_fin": hora_fin.strftime("%H:%M"),
-            "hora_almuerzo": hora_almuerzo.strftime("%H:%M"),
-            "dias_libres": [d.isoformat() for d in dias_libres],
-            "agenda_generada": resultado
-        })
-
-    @action(detail=True, methods=['post'], url_path='publicar')
-    def publicar(self, request, pk=None):
-        try:
-            agendames = AgendaMes.objects.get(pk=pk, medico__usuario=request.user)
-        except AgendaMes.DoesNotExist:
-            return Response({"error": "No se encontró la agenda."}, status=404)
-
-        if agendames.publicado:
-            return Response({"error": "Esta agenda ya fue publicada."}, status=400)
-
-        agendames.publicado = True
-        agendames.save()
-
-        return Response({"mensaje": "Agenda publicada. Ya no se puede modificar."})
-    
-    @action(detail=True, methods=['patch'], url_path='modificar')
-    def modificar_agenda(self, request, pk=None):
-        try:
-            agendames = AgendaMes.objects.get(pk=pk, medico__usuario=request.user)
-        except AgendaMes.DoesNotExist:
-            return Response({"error": "No se encontró la agenda del médico."}, status=404)
-
-        if agendames.publicado:
-            return Response({"error": "No se puede modificar una agenda ya publicada."}, status=400)
-
-        try:
-            hora_inicio = datetime.strptime(request.data["horainico"], "%H:%M").time()
-            hora_fin = datetime.strptime(request.data["horafin"], "%H:%M").time()
-            hora_almuerzo = datetime.strptime(request.data["horaalmuerzo"], "%H:%M").time()
-            dias_libres = [datetime.strptime(d, "%Y-%m-%d").date() for d in request.data["dias_libres"]]
-        except (KeyError, ValueError):
-            return Response({"error": "Formato inválido en horas o fechas."}, status=400)
-
-        duraciones = {
-            "Medicina general": 20,
-            "Odontología": 30,
-            "Laboratorios": 20
-        }
-        duracion = duraciones.get(agendames.medico.especialidad, 20)
-
-        # Borrar los días actuales
-        agendames.agendadia.all().delete()
-
-        # Regenerar los días
-        fecha = agendames.mes.replace(day=1)
-        mes_actual = fecha.month
-
-        while fecha.month == mes_actual:
-            if fecha.weekday() < 5 and fecha not in dias_libres:
-                hora_actual = datetime.combine(fecha, hora_inicio)
-                fin_jornada = datetime.combine(fecha, hora_fin)
-                almuerzo_inicio = datetime.combine(fecha, hora_almuerzo)
-                almuerzo_fin = almuerzo_inicio + timedelta(hours=1)
-
-                while hora_actual + timedelta(minutes=duracion) <= fin_jornada:
-                    if not (almuerzo_inicio <= hora_actual < almuerzo_fin):
-                        AgendaDia.objects.create(
-                            horainico=hora_actual.time(),
-                            horafin=(hora_actual + timedelta(minutes=duracion)).time(),
-                            horaalmuerzo=hora_almuerzo,
-                            agendames=agendames
-                        )
-                    hora_actual += timedelta(minutes=duracion)
-            fecha += timedelta(days=1)
-
-        return Response({"mensaje": "Agenda modificada correctamente."}, status=200)
-    
-    @action(detail=True, methods=['delete'], url_path='eliminar')
-    def eliminar_agenda(self, request, pk=None):
-        try:
-            agendames = AgendaMes.objects.get(pk=pk, medico__usuario=request.user)
-        except AgendaMes.DoesNotExist:
-            return Response({"error": "No se encontró la agenda del médico."}, status=404)
-
-        # Elimina los días relacionados primero (por seguridad)
-        agendames.agendadia.all().delete()
-        agendames.delete()
-
-        return Response({"mensaje": "Agenda eliminada correctamente. Ya puedes crear una nueva."}, status=200)
+        except Exception as e:
+            return Response({"error": f"Ocurrió un error inesperado: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class AgendaDiaViewSet(viewsets.ModelViewSet):
+    queryset = AgendaDia.objects.all()
+    serializer_class = AgendaDiaSerializer
+    # permission_classes = [permissions.IsAuthenticated]        
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])

@@ -76,7 +76,7 @@ class SolicitudActualizacionHV(models.Model):
 
 
 class AgendaMes(models.Model):
-    mes = models.DateField(auto_now_add=True)
+    mes = models.DateField()
     medico = models.ForeignKey(Medico , on_delete=models.CASCADE)
     publicado = models.BooleanField(default=False)
 
