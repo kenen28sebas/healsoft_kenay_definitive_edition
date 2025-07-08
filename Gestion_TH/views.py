@@ -73,6 +73,8 @@ class HojaVistas(viewsets.ModelViewSet):
                 return Response({"error": "Solo el Gestor de Talento Humano puede registrar médicos."}, status=status.HTTP_403_FORBIDDEN)
 
         usuario_data = request.data.pop("usuario", None)
+        usuario_data = usuario_data.pop("usuario", None)
+        print(usuario_data)
         if not usuario_data:
                 return Response({"error": "Los datos del usuario son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -92,8 +94,10 @@ class HojaVistas(viewsets.ModelViewSet):
         #Eliminamos cargo de request.data antes de crear Medico
         # medico_instance = Medico.objects.create(usuario=usuario_instance, cargo=cargo, **request.data)
         medico = Medico.objects.filter(usuario__nro_doc=usuario_data["nro_doc"]).first()
+        usuario = Usuario.objects.filter(nro_doc=usuario_data["nro_doc"]).first()
+        print(medico.usuario_id)
         hoja_vida_instance = HojaVida.objects.create(
-                personal_medico=medico,
+                personal=usuario,
                 gestor_th=gestor
         )
 
@@ -196,21 +200,33 @@ class AcademicoVistas(viewsets.ModelViewSet):
         gestor = Gestor_TH.objects.filter(usuario=request.user).first()
         if not gestor:
                 return Response({"error": "No tienes permiso para registrar información académica"}, status=status.HTTP_403_FORBIDDEN)
-
+        print(request.POST.get("nro_doc"))
         nro_doc = request.POST.get("nro_doc")
         usuario = Usuario.objects.filter(nro_doc=nro_doc).first()
         if not usuario:
                 return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-
+        id_personal = ""
         medico = Medico.objects.filter(usuario=usuario).first()
-        if not medico:
-                return Response({"error": "Médico no encontrado para este usuario"}, status=status.HTTP_404_NOT_FOUND)
 
-        hoja_vida = HojaVida.objects.filter(personal_medico=medico).first()
+        if medico:
+            id_personal = medico.usuario_id
+            print("Es médico:", id_personal)
+        else:
+            auxiliar = Aux_adm.objects.filter(usuario__nro_doc=nro_doc).first()
+            if auxiliar:
+                id_personal = auxiliar.usuario_id
+                print("Es auxiliar:", id_personal)
+            else:
+                return Response({"error": "El usuario no está registrado como médico ni como auxiliar."}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+        hoja_vida = HojaVida.objects.filter(personal=id_personal).first()
+        print(3)
         if not hoja_vida:
                 return Response({"error": "El médico no tiene una hoja de vida"}, status=status.HTTP_404_NOT_FOUND)
 
-
+        print(1)
         titulo_obtenido = request.POST.get("titulo_obtenido")
         institucion_educativa = request.POST.get("institucion_educativa")
         fecha_inicio = request.POST.get("fecha_inicio")
@@ -321,30 +337,45 @@ class ExperienciVistas(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, EsGestorth]
 
     def create(self, request, *args, **kwargs):
-        #Verificar que el usuario sea un gestor de talento humano
         gestor = Gestor_TH.objects.filter(usuario=request.user).first()
         if not gestor:
             return Response({"error": "Solo el gestor de talento humano tiene acceso a esta vista"}, status=status.HTTP_403_FORBIDDEN)
 
-        #Obtener `nro_doc` de la solicitud correctamente
-        nro_doc = request.data.get("nro_doc")
+        nro_doc = request.POST.get("nro_doc")
         if not nro_doc:
-            return Response({"error": "Debes proporcionar el número de documento del médico"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Debes proporcionar el número de documento del usuario"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Buscar el médico con ese `nro_doc`
-        usuario = get_object_or_404(Usuario, nro_doc=nro_doc)
-        medico = get_object_or_404(Medico, usuario=usuario)
-        hoja_vida = get_object_or_404(HojaVida, personal_medico=medico)
+        usuario = Usuario.objects.filter(nro_doc=nro_doc).first()
+        if not usuario:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-        #Obtener otros datos de la solicitud
-        nombre_empresa = request.data.get("nombre_empresa")
-        cargo = request.data.get("cargo")
-        fecha_inicio = request.data.get("fecha_inicio")
-        fecha_finalizacion = request.data.get("fecha_finalizacion")
-        tipo_contrato = request.data.get("tipo_contrato")
+        personal_id = None
+        medico = Medico.objects.filter(usuario=usuario).first()
+        if medico:
+            personal = medico.usuario_id
+        else:
+            auxiliar = Aux_adm.objects.filter(usuario=usuario).first()
+            if auxiliar:
+                personal = auxiliar.usuario_id
+            else:
+                return Response({"error": "El usuario no está registrado como médico ni como auxiliar."}, status=status.HTTP_404_NOT_FOUND)
+
+        hoja_vida = HojaVida.objects.filter(personal=personal).first()
+        if not hoja_vida:
+            return Response({"error": "El usuario no tiene una hoja de vida registrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Extraer campos de experiencia laboral
+        nombre_empresa = request.POST.get("nombre_empresa")
+        cargo = request.POST.get("cargo")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_finalizacion = request.POST.get("fecha_finalizacion")
+        tipo_contrato = request.POST.get("tipo_contrato")
         soporte_pdf = request.FILES.get("soporte")
 
-        #Crear experiencia laboral
+        campos_requeridos = [nombre_empresa, cargo, fecha_inicio, fecha_finalizacion, tipo_contrato]
+        if None in campos_requeridos:
+            return Response({"error": "Todos los campos son obligatorios para registrar experiencia"}, status=status.HTTP_400_BAD_REQUEST)
+
         experiencia = Experiencia_laboral.objects.create(
             hoja_vida=hoja_vida,
             nombre_empresa=nombre_empresa,
@@ -352,10 +383,11 @@ class ExperienciVistas(viewsets.ModelViewSet):
             fecha_inicio=fecha_inicio,
             fecha_finalizacion=fecha_finalizacion,
             tipo_contrato=tipo_contrato,
-            soporte=soporte_pdf,
+            soporte=soporte_pdf
         )
 
-        return Response({"mensaje": "La experiencia laboral fue creada correctamente"}, status=status.HTTP_201_CREATED)
+        return Response({"mensaje": "La experiencia laboral fue registrada correctamente"}, status=status.HTTP_201_CREATED)
+
     
     def list(self, request, *args, **kwargs):
         #Verificar que el usuario sea un gestor de talento humano
@@ -744,12 +776,12 @@ def buscar_usuario_por_documento(request):
     serializer = UsuarioSerializer(usuario)
     return Response({'existe': True, 'usuario': serializer.data}, status=200)
 #esta vista me permite registrar medicos y asociarle su hoja de vida en el momento que se crea el registro
-class HojaVistas(viewsets.ModelViewSet):
-#aqui estoy configurando la vista para trabajar con el modelo medico
-    queryset = Medico.objects.all()
-#hacemos uso del serializador para convertir los datos a json
-    serializer_class = MedicoSerializador
-    authentication_classes =[TokenAuthentication]
-#aqui estoy definiendo los permisos para hacer uso de la vista, haciendo uso del IsAuthenticated y de EsGestorth que es el que verifica que sea un gestor de th
-    permission_classes = [IsAuthenticated,EsGestorth]  
-#con este metodo registro medicos y automaticamente genero su hoja de vida
+# class HojaVistas(viewsets.ModelViewSet):
+# #aqui estoy configurando la vista para trabajar con el modelo medico
+#     queryset = Medico.objects.all()
+# #hacemos uso del serializador para convertir los datos a json
+#     serializer_class = MedicoSerializador
+#     authentication_classes =[TokenAuthentication]
+# #aqui estoy definiendo los permisos para hacer uso de la vista, haciendo uso del IsAuthenticated y de EsGestorth que es el que verifica que sea un gestor de th
+#     permission_classes = [IsAuthenticated,EsGestorth]  
+# #con este metodo registro medicos y automaticamente genero su hoja de vida

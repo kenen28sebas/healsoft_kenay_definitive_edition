@@ -80,7 +80,7 @@ def registrar_paciente(request):
             return Response(solicitud_serializer.errors, status=400)
         solicitud_serializer.save()
         
-        return Response({"message": "Usuario registrado exitosamente"}, status=201)
+        return Response({"message": "Usuario registrado exitosamente","codigo_verificacion" : data_solicitud["codigo_verificacion"]}, status=201)
     else:
         print("Errores de validación:", serializer.errors)
         return Response(serializer.errors, status=400)
@@ -111,7 +111,7 @@ def registrar_roles(request):
             return Response(solicitud_serializer.errors, status=400)
         solicitud_serializer.save()
         
-        return Response({"message": "Usuario registrado exitosamente"}, status=201)
+        return Response({"message": "Usuario registrado exitosamente","codigo_verificacion" : data_solicitud["codigo_verificacion"]}, status=201)
     else:
         print("Errores de validación:", serializer.errors)
         return Response(serializer.errors, status=400)
@@ -220,6 +220,31 @@ def actualizar_datos (request):
             return Response({"message": "Datos de usuario actualizados exitosamente"}, status=200)
         except Gestor_TH.DoesNotExist:
             return Response({"error": "Gestor TH no encontrado"}, status=404)  
+    if tipo_usuario == "auxiliar":
+        try:
+            datos_aux = {
+                "tipo_contrato": datos_rol.get("tipo_contrato"),
+                "usuario": usuario.nro_doc
+            }
+
+            auxiliar = Aux_adm.objects.filter(usuario_id=usuario.nro_doc).first()
+
+            if not auxiliar:
+                serializer_aux = AuxiliarAdminSerializador(data=datos_aux)
+                if not serializer_aux.is_valid():
+                    return Response(serializer_aux.errors, status=400)
+                serializer_aux.save(usuario=usuario)
+                return Response({"message": "Datos de auxiliar creados exitosamente"}, status=200)
+
+            serializer_aux = AuxiliarAdminSerializador(auxiliar, data=datos_aux, partial=True)
+            if not serializer_aux.is_valid():
+                return Response(serializer_aux.errors, status=400)
+            serializer_aux.save(usuario=usuario)
+            return Response({"message": "Datos de auxiliar actualizados exitosamente"}, status=200)
+
+        except Aux_adm.DoesNotExist:
+            return Response({"error": "Auxiliar administrativo no encontrado"}, status=404)
+    
     if tipo_usuario == "paciente":
         try:
             datos_paciente = {

@@ -82,6 +82,7 @@ class AgendaMes(models.Model):
 
 
 class AgendaDia(models.Model):
+    dia = models.CharField(max_length=5,default="1")
     horainico = models.TimeField(auto_now=False,auto_now_add=False,blank=True,null=True)
     horafin = models.TimeField(auto_now=False,auto_now_add=False,blank=True,null=True)
     horaalmuerzo = models.TimeField(blank=True,null=True)

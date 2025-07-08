@@ -7,7 +7,7 @@ class HojaVidaSerializer(serializers.ModelSerializer):
             model=HojaVida
             fields = [
                 "id",
-                "personal_medico",
+                "personal",
                 "gestor_th",
                 "fecha_creacion"
             ]
