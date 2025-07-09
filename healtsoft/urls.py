@@ -33,6 +33,9 @@ urlpatterns = [
     path("activar_usuario/", activar_usuario, name="activar_usuario"),
     path("api/gerente/", include('Gerencia.urls')),
     path("api/gestor_th/", include('Gestion_TH.urls')),
+    path("api/gestor-cita/", include('Gestion_citas.urls')),
     path('buscar_usuario/', buscar_usuario_por_documento, name='buscar_usuario'),
     path("lista/medicos/", lista_medicos, name="lista_medicos"),
+    path("lista/pacientes/", lista_pacientes, name="lista_pacientes"),
+    path("datos/paciente/", datos_paciente, name="datos_pacientes"),
 ]

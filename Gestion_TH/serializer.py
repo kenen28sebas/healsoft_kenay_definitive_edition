@@ -107,7 +107,7 @@ class AgendaDiaSerializer(serializers.ModelSerializer):
         return bloques
 
 class AgendaMesSerializer(serializers.ModelSerializer):
-
+    agendadia = AgendaDiaSerializer(many=True, read_only=True)
     class Meta:
         model = AgendaMes
-        fields = ['id', 'mes', 'publicado', 'medico']
+        fields = ['id', 'mes', 'publicado', 'medico','agendadia']

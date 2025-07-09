@@ -69,7 +69,7 @@ class Gestor_thSerializador(serializers.ModelSerializer):
         return gestor_th
     
 class PacienteSerializador(serializers.ModelSerializer):
-    usuario = UsuarioSerializer()
+    usuario = UsuarioSerializer(read_only = True)
 
     class Meta:
         model = Paciente
@@ -92,18 +92,30 @@ class PacienteSerializador(serializers.ModelSerializer):
         return paciente
 
 class AuxiliarAdminSerializador(serializers.ModelSerializer):
-    usuario = UsuarioSerializer()
+    usuario = UsuarioSerializer(read_only=True)
+
     class Meta:
         model = Aux_adm
-        fields="__all__"
+        fields = "__all__"
 
     def create(self, validated_data):
-        usuario_data=validated_data.pop('usuario')
-        usuario=UsuarioSerializer.create(UsuarioSerializer(),validated_data=usuario_data)
-        token, created = Token.objects.get_or_create(user=usuario)  #crear token para el usuario
-        aux_adm = Aux_adm.objects.create(usuario = usuario, **validated_data )
-        return aux_adm
-    
+        usuario_data = validated_data.pop("usuario")
+
+        # Buscar usuario existente por documento
+        usuario_existente = Usuario.objects.filter(
+            nro_doc=usuario_data.get("nro_doc")
+        ).first()
+
+        if not usuario_existente:
+            raise serializers.ValidationError("El usuario no existe en el sistema.")
+
+        # Crear token si no existe
+        Token.objects.get_or_create(user=usuario_existente)
+
+        # Crear el auxiliar administrativo asociado
+        auxiliar = Aux_adm.objects.create(usuario=usuario_existente, **validated_data)
+        return auxiliar
+
 class GerenteSerializador(serializers.ModelSerializer):
     usuario = UsuarioSerializer()
     class Meta:

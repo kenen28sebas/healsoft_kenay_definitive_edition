@@ -647,6 +647,26 @@ class AgendaMesViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": f"Ocurrió un error inesperado: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def list(self, request):
+        nro_doc = request.query_params.get('nro_doc')
+        if not nro_doc:
+            return Response({'error': 'nro_doc parameter is required'}, status=400)
+
+        usuario = Usuario.objects.filter(nro_doc=nro_doc).first()
+        if not usuario:
+            return Response({'error': 'Usuario not found'}, status=404)
+
+        medico = Medico.objects.filter(usuario_id=nro_doc).first()
+        if not medico:
+            return Response({'error': 'Medico not found'}, status=404)
+
+        agendas = AgendaMes.objects.filter(medico_id=medico.id)
+        print(len(agendas))
+        serializer = self.get_serializer(instance=agendas, many=True)
+
+        return Response(serializer.data)
+
         
 class AgendaDiaViewSet(viewsets.ModelViewSet):
     queryset = AgendaDia.objects.all()

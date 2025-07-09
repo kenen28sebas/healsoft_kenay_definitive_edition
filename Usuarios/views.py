@@ -154,6 +154,7 @@ def actualizar_datos (request):
     datos_actualizar = request.data.get('datos_actualizar')
     print(datos_actualizar)
     datos_rol = request.data.get('datos_rol')
+    print(datos_rol)
     if not datos_actualizar:
         return Response({"error": "El campo 'datos_actualizar' es obligatorio"}, status=400)
     tipo_usuario = request.data.get('tipo_usuario')
@@ -176,6 +177,7 @@ def actualizar_datos (request):
     if not serializer_usuario.is_valid():
         return Response(serializer_usuario.errors, status=400)      
     serializer_usuario.save()
+    print(23)
     if tipo_usuario == "medico":
         try:
             datos_medico = {
@@ -221,30 +223,26 @@ def actualizar_datos (request):
         except Gestor_TH.DoesNotExist:
             return Response({"error": "Gestor TH no encontrado"}, status=404)  
     if tipo_usuario == "auxiliar":
-        try:
-            datos_aux = {
-                "tipo_contrato": datos_rol.get("tipo_contrato"),
-                "usuario": usuario.nro_doc
-            }
+        datos_aux = {
+            "tipo_contrato": datos_rol.get("tipo_contrato"),
+            "usuario": usuario.nro_doc
+        }
 
-            auxiliar = Aux_adm.objects.filter(usuario_id=usuario.nro_doc).first()
+        auxiliar = Aux_adm.objects.filter(usuario_id=usuario.nro_doc).first()
 
-            if not auxiliar:
-                serializer_aux = AuxiliarAdminSerializador(data=datos_aux)
-                if not serializer_aux.is_valid():
-                    return Response(serializer_aux.errors, status=400)
-                serializer_aux.save(usuario=usuario)
-                return Response({"message": "Datos de auxiliar creados exitosamente"}, status=200)
-
-            serializer_aux = AuxiliarAdminSerializador(auxiliar, data=datos_aux, partial=True)
+        if not auxiliar:
+            serializer_aux = AuxiliarAdminSerializador(data=datos_aux)
             if not serializer_aux.is_valid():
                 return Response(serializer_aux.errors, status=400)
             serializer_aux.save(usuario=usuario)
-            return Response({"message": "Datos de auxiliar actualizados exitosamente"}, status=200)
+            return Response({"message": "Datos de auxiliar creados exitosamente"}, status=200)
 
-        except Aux_adm.DoesNotExist:
-            return Response({"error": "Auxiliar administrativo no encontrado"}, status=404)
-    
+        serializer_aux = AuxiliarAdminSerializador(auxiliar, data=datos_aux, partial=True)
+        if not serializer_aux.is_valid():
+            return Response(serializer_aux.errors, status=400)
+        serializer_aux.save(usuario=usuario)
+        return Response({"message": "Datos de auxiliar actualizados exitosamente"}, status=200)
+
     if tipo_usuario == "paciente":
         try:
             datos_paciente = {
@@ -266,6 +264,7 @@ def actualizar_datos (request):
                 return Response({"message": "Datos de usuario actualizados exitosamente"}, status=200)
             serializer_paciente = PacienteSerializador(paciente, data=datos_paciente, partial=True)  # Permitir actualizaciones parciales
             if not serializer_paciente.is_valid():
+                print(2)
                 return Response(serializer_paciente.errors, status=400)
             if serializer_paciente.is_valid():
                 serializer_paciente.save(usuario=usuario)
@@ -555,3 +554,22 @@ def lista_medicos(request):
     medicos = Medico.objects.all()
     serializer = MedicoSerializador(medicos, many=True)
     return Response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def lista_pacientes(request):
+    pacientes = Paciente.objects.all()
+    serializer = PacienteSerializador(pacientes, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def datos_paciente(request):
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+        serializer = PacienteSerializador(paciente)
+        return Response(serializer.data)
+    except Paciente.DoesNotExist:
+        return Response({"detail": "Paciente no encontrado."}, status=404)

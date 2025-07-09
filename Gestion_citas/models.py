@@ -5,19 +5,19 @@ from Usuarios.models import Paciente, Medico
 
 
 class Cita(models.Model):
-    fecha_asignacion = models.DateField()
-    fecha_solicitud = models.DateField(auto_now=True)
+    fecha_asignacion = models.DateTimeField(unique=True)
+    fecha_solicitud = models.DateTimeField(auto_now=True)
     estado = models.CharField(max_length=20, choices=[
-        ('Pendiente', 'Pendiente'),
-        ('Confirmada', 'Confirmada'),
-        ('Cancelada', 'Cancelada'),
-        ('Atendida', 'Atendida')
+        ('pendiente', 'pendiente'),
+        ('confirmada', 'confirmada'),
+        ('cancelada', 'Cancelada'),
+        ('atendida', 'atendida')
     ])
     especialidad = models.CharField(max_length=100)
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE)
     tipo_atencion = models.CharField(max_length=50, choices=[
-        ('Presencial', 'Presencial'),
-        ('Virtual', 'Virtual'),
+        ('presencial', 'presencial'),
+        ('virtual', 'virtual'),
     ])
     centro_medico = models.ForeignKey(Centro_medico, on_delete=models.CASCADE)
     medico = models.ForeignKey(Medico, on_delete=models.CASCADE)
