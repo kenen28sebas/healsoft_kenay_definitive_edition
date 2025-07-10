@@ -69,14 +69,14 @@ class Gestor_thSerializador(serializers.ModelSerializer):
         return gestor_th
     
 class PacienteSerializador(serializers.ModelSerializer):
-    usuario = UsuarioSerializer(read_only = True)
+    usuario = UsuarioSerializer()
 
     class Meta:
         model = Paciente
         fields = "__all__"
 
     def create(self, validated_data):
-        print("Datos del paciente: 1", validated_data)
+        print("✔️ Validated data completo:", validated_data)
         usuario_data = validated_data.pop('usuario')
         print("sdasd",usuario_data)
         usuario_exist = Usuario.objects.filter(
@@ -99,11 +99,12 @@ class AuxiliarAdminSerializador(serializers.ModelSerializer):
         fields = "__all__"
 
     def create(self, validated_data):
+        print("hola",validated_data)
         usuario_data = validated_data.pop("usuario")
-
+        print(usuario_data)
         # Buscar usuario existente por documento
         usuario_existente = Usuario.objects.filter(
-            nro_doc=usuario_data.get("nro_doc")
+            nro_doc=usuario_data
         ).first()
 
         if not usuario_existente:

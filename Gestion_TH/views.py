@@ -194,12 +194,12 @@ class HojaVistas(viewsets.ModelViewSet):
 class AcademicoVistas(viewsets.ModelViewSet):
      queryset = Academico.objects.all()
      serializer_class = AcademicoSerializer
-     permission_classes = [IsAuthenticated, EsGestorth]  
+    #  permission_classes = [IsAuthenticated, EsGestorth]  
 
      def create(self, request, *args, **kwargs):
-        gestor = Gestor_TH.objects.filter(usuario=request.user).first()
-        if not gestor:
-                return Response({"error": "No tienes permiso para registrar información académica"}, status=status.HTTP_403_FORBIDDEN)
+        # gestor = Gestor_TH.objects.filter(usuario=request.user).first()
+        # if not gestor:
+        #         return Response({"error": "No tienes permiso para registrar información académica"}, status=status.HTTP_403_FORBIDDEN)
         print(request.POST.get("nro_doc"))
         nro_doc = request.POST.get("nro_doc")
         usuario = Usuario.objects.filter(nro_doc=nro_doc).first()
@@ -256,9 +256,9 @@ class AcademicoVistas(viewsets.ModelViewSet):
      
      def list(self, request, *args, **kwargs):
         #Verificar que el usuario sea un gestor de talento humano
-        gestor = Gestor_TH.objects.filter(usuario=request.user).first()
-        if not gestor:
-            return Response({"error": "No tienes permiso para usar esta vista"}, status=status.HTTP_403_FORBIDDEN)
+        # gestor = Gestor_TH.objects.filter(usuario=request.user).first()
+        # if not gestor:
+        #     return Response({"error": "No tienes permiso para usar esta vista"}, status=status.HTTP_403_FORBIDDEN)
 
         #Obtener `nro_doc` de los parámetros de la solicitud
         nro_doc = request.query_params.get("nro_doc")
@@ -270,7 +270,7 @@ class AcademicoVistas(viewsets.ModelViewSet):
         Usuario.objects.filter(nro_doc__exact="6").exists()
         usuario = get_object_or_404(Usuario, nro_doc=nro_doc)
         medico = get_object_or_404(Medico, usuario=usuario)
-        hoja_vida = get_object_or_404(HojaVida, personal_medico=medico)
+        hoja_vida = get_object_or_404(HojaVida, personal_id=nro_doc)
 
         #Obtener académicos asociados a la hoja de vida
         academicos = Academico.objects.filter(hoja_vida=hoja_vida)
@@ -334,12 +334,12 @@ class AcademicoVistas(viewsets.ModelViewSet):
 class ExperienciVistas(viewsets.ModelViewSet):
     queryset = Experiencia_laboral.objects.all()  # ✅ Corregir el queryset
     serializer_class = ExperienciaSerializer
-    permission_classes = [IsAuthenticated, EsGestorth]
+    # permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        gestor = Gestor_TH.objects.filter(usuario=request.user).first()
-        if not gestor:
-            return Response({"error": "Solo el gestor de talento humano tiene acceso a esta vista"}, status=status.HTTP_403_FORBIDDEN)
+        # gestor = Gestor_TH.objects.filter(usuario=request.user).first()
+        # if not gestor:
+        #     return Response({"error": "Solo el gestor de talento humano tiene acceso a esta vista"}, status=status.HTTP_403_FORBIDDEN)
 
         nro_doc = request.POST.get("nro_doc")
         if not nro_doc:
@@ -391,9 +391,9 @@ class ExperienciVistas(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
         #Verificar que el usuario sea un gestor de talento humano
-        gestor = Gestor_TH.objects.filter(usuario=request.user).first()
-        if not gestor:
-            return Response({"error": "No tienes permiso para acceder a esta información."}, status=status.HTTP_403_FORBIDDEN)
+        # gestor = Gestor_TH.objects.filter(usuario=request.user).first()
+        # if not gestor:
+        #     return Response({"error": "No tienes permiso para acceder a esta información."}, status=status.HTTP_403_FORBIDDEN)
 
         # Obtener `nro_doc` de los parámetros de la solicitud
         nro_doc = request.query_params.get("nro_doc")
@@ -403,7 +403,9 @@ class ExperienciVistas(viewsets.ModelViewSet):
         # Buscar el médico con ese `nro_doc`
         usuario = get_object_or_404(Usuario, nro_doc=nro_doc)
         medico = get_object_or_404(Medico, usuario=usuario)
-        hoja_vida = get_object_or_404(HojaVida, personal_medico=medico)
+        print(2)
+        hoja_vida = get_object_or_404(HojaVida, personal_id=nro_doc)
+        print(3)
 
         #Obtener todas las experiencias asociadas a esa hoja de vida
         experiencias = Experiencia_laboral.objects.filter(hoja_vida=hoja_vida)
@@ -425,7 +427,7 @@ class ExperienciVistas(viewsets.ModelViewSet):
         #Buscar el médico con ese `nro_doc`
         usuario = get_object_or_404(Usuario, nro_doc=nro_doc)
         medico = get_object_or_404(Medico, usuario=usuario)
-        hoja_vida = get_object_or_404(HojaVida, personal_medico=medico)
+        hoja_vida = get_object_or_404(HojaVida, personal_id=medico)
 
         #Obtener la experiencia laboral asociada a esa hoja de vida
         experiencia = get_object_or_404(Experiencia_laboral, hoja_vida=hoja_vida, pk=pk)

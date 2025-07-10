@@ -54,6 +54,7 @@ class CustomAutoSchema(AutoSchema):
 def registrar_paciente(request):
     # Crear un nuevo paciente
     # Validar la contraseña
+    print(request.data)
     try:
         usuario = request.data.get('usuario')
         password = usuario["password"]
@@ -68,13 +69,14 @@ def registrar_paciente(request):
     serializer=PacienteSerializador(data= request.data)
     print(serializer.is_valid())
     if serializer.is_valid(): 
-        print("Datos del paciente: 1", usuario)
+        serializer.save()
+        print("Datos del paciente: 1", serializer.data)
         data_solicitud = {
             'usuario': usuario["nro_doc"],  # Obtener el número de documento del usuari
             'codigo_verificacion': generar_codigo_verificacion()  # Generar un código de verificación
         }
         solicitud_serializer = SolicitudContrasenaSerializador(data=data_solicitud)
-        serializer.save()
+        
         if not solicitud_serializer.is_valid():
             print("Errores de validación de solicitud:", solicitud_serializer.errors)
             return Response(solicitud_serializer.errors, status=400)
@@ -223,6 +225,7 @@ def actualizar_datos (request):
         except Gestor_TH.DoesNotExist:
             return Response({"error": "Gestor TH no encontrado"}, status=404)  
     if tipo_usuario == "auxiliar":
+        
         datos_aux = {
             "tipo_contrato": datos_rol.get("tipo_contrato"),
             "usuario": usuario.nro_doc
@@ -233,6 +236,7 @@ def actualizar_datos (request):
         if not auxiliar:
             serializer_aux = AuxiliarAdminSerializador(data=datos_aux)
             if not serializer_aux.is_valid():
+                print(serializer_aux.errors)
                 return Response(serializer_aux.errors, status=400)
             serializer_aux.save(usuario=usuario)
             return Response({"message": "Datos de auxiliar creados exitosamente"}, status=200)

@@ -104,7 +104,79 @@ class VerPersonal(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.response import Response
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Count
+from datetime import datetime
+from .models import Servicio
+from Gestion_citas.models import Cita
+from Usuarios.models import Medico,Paciente,Usuario
 
 
 
 
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def dashboard_admin(request):
+    # 🗓 Citas por mes
+    citas_por_mes = Cita.objects.annotate(
+        mes=models.functions.TruncMonth('fecha_asignacion')
+    ).values('mes').annotate(total=Count('id')).order_by('mes')
+
+    citas_por_mes_data = {
+        dato['mes'].strftime('%Y-%m'): dato['total'] for dato in citas_por_mes
+    }
+
+    # 🩺 Servicios activos vs inactivos
+    servicios_activos = Servicio.objects.filter(estado=True).count()
+    servicios_inactivos = Servicio.objects.filter(estado=False).count()
+
+    # 🧑‍⚕️ Top 5 médicos por cantidad de citas
+    top_medicos_raw = Cita.objects.values('medico').annotate(total=Count('id')).order_by('-total')[:5]
+    top_medicos = []
+    for item in top_medicos_raw:
+        try:
+            medico = Medico.objects.get(id=item['medico'])
+            nombre = f"{medico.usuario.first_name} {medico.usuario.last_name}"
+        except:
+            nombre = "—"
+        top_medicos.append({
+            "medico": nombre,
+            "citas": item['total']
+        })
+
+    # 👥 Usuarios por rol
+    usuarios_por_rol = {
+    "paciente": Paciente.objects.count(),
+    "medico": Medico.objects.count(),
+    "aux_adm": Aux_adm.objects.count(),
+    "gerente": Gerente.objects.count(),
+    "gestor_th": Gestor_TH.objects.count()
+}
+    # 🧾 Régimen y EPS más frecuentes
+    regimen_frecuente_raw = Paciente.objects.values('regimen').annotate(total=Count('id')).order_by('-total')
+    regimen_frecuente = {r['regimen']: r['total'] for r in regimen_frecuente_raw}
+
+    eps_frecuentes_raw = Paciente.objects.values('eps').annotate(total=Count('id')).order_by('-total')
+    eps_frecuentes = {e['eps']: e['total'] for e in eps_frecuentes_raw}
+
+    # ❌ Estado de citas
+    estado_citas_raw = Cita.objects.values('estado').annotate(total=Count('id'))
+    estado_citas = {c['estado']: c['total'] for c in estado_citas_raw}
+
+    # 📦 Respuesta final
+    data = {
+        "citas_por_mes": citas_por_mes_data,
+        "servicios_activos": servicios_activos,
+        "servicios_inactivos": servicios_inactivos,
+        "top_medicos": top_medicos,
+        "usuarios_por_rol": usuarios_por_rol,
+        "regimen_frecuente": regimen_frecuente,
+        "eps_frecuentes": eps_frecuentes,
+        "estado_citas": estado_citas,
+    }
+
+    return Response(data)
