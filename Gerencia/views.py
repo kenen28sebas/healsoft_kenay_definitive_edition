@@ -121,14 +121,32 @@ from Usuarios.models import Medico,Paciente,Usuario
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def dashboard_admin(request):
-    # 🗓 Citas por mes
-    citas_por_mes = Cita.objects.annotate(
-        mes=models.functions.TruncMonth('fecha_asignacion')
-    ).values('mes').annotate(total=Count('id')).order_by('mes')
+    from datetime import datetime
 
-    citas_por_mes_data = {
-        dato['mes'].strftime('%Y-%m'): dato['total'] for dato in citas_por_mes
-    }
+    from datetime import datetime
+
+    # # 🗓 Citas por mes con manejo robusto de fechas
+    # citas_por_mes = Cita.objects.annotate(
+    #     mes=models.functions.TruncMonth('fecha_asignacion')
+    # ).values('mes').annotate(total=Count('id')).order_by('mes')
+
+    # citas_por_mes_data = {}
+
+    # for dato in citas_por_mes:
+    #     fecha_mes = dato.get('mes')
+    #     if not fecha_mes:
+    #         continue
+
+    #     try:
+    #         # Evitamos strftime para no disparar zonas horarias si el motor no las soporta
+    #         año = fecha_mes.year if hasattr(fecha_mes, "year") else str(fecha_mes)[:4]
+    #         mes = str(fecha_mes.month).zfill(2) if hasattr(fecha_mes, "month") else str(fecha_mes)[5:7]
+    #         key = f"{año}-{mes}"
+    #         citas_por_mes_data[key] = dato['total']
+    #     except Exception as e:
+    #         print(f"❌ Fecha fallida en cita: {fecha_mes} → {e}")
+    #         continue
+
 
     # 🩺 Servicios activos vs inactivos
     servicios_activos = Servicio.objects.filter(estado=True).count()
@@ -169,7 +187,7 @@ def dashboard_admin(request):
 
     # 📦 Respuesta final
     data = {
-        "citas_por_mes": citas_por_mes_data,
+        # "citas_por_mes": citas_por_mes_data,
         "servicios_activos": servicios_activos,
         "servicios_inactivos": servicios_inactivos,
         "top_medicos": top_medicos,
