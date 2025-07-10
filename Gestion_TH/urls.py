@@ -18,6 +18,7 @@ router.register(r'agenda-dia', AgendaDiaViewSet, basename="agenda-dia")
 
 
 urlpatterns = [
-    path('',include(router.urls))
+    path('',include(router.urls)),
+    path("dashboard_gestor_th/" , dashboard_gestor_th)
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

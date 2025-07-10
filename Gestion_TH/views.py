@@ -699,3 +699,40 @@ def buscar_usuario_por_documento(request):
 # #aqui estoy definiendo los permisos para hacer uso de la vista, haciendo uso del IsAuthenticated y de EsGestorth que es el que verifica que sea un gestor de th
 #     permission_classes = [IsAuthenticated,EsGestorth]  
 # #con este metodo registro medicos y automaticamente genero su hoja de vida
+from django.db.models import Count
+
+@api_view(['GET'])
+def dashboard_gestor_th(request):
+    print(request.query_params.get('nro_doc'))
+    nro_doc = request.query_params.get('nro_doc')
+    gestor = Gestor_TH.objects.filter(usuario_id=nro_doc).first()
+
+
+    # 📄 Total hojas de vida supervisadas por este gestor
+    hojas_de_vida = HojaVida.objects.filter(gestor_th=gestor)
+    total_hojas = hojas_de_vida.count()
+
+    # 🎓 Niveles educativos del personal asociado
+    nivel_raw = Academico.objects.filter(hoja_vida__gestor_th=gestor)\
+        .values('nivel_educativo')\
+        .annotate(total=Count('nivel_educativo'))\
+        .order_by('-total')
+
+    nivel_educativo_stats = {n['nivel_educativo']: n['total'] for n in nivel_raw}
+
+    # 📍 Municipios más frecuentes
+    municipios_raw = Usuario.objects.filter(hojavida__gestor_th=gestor)\
+        .values('municipio')\
+        .annotate(total=Count('municipio'))\
+        .order_by('-total')
+
+    municipios_stats = {m['municipio']: m['total'] for m in municipios_raw if m['municipio']}
+
+    # 📦 Respuesta final
+    data = {
+        "total_hojas_de_vida": total_hojas,
+        "nivel_educativo_stats": nivel_educativo_stats,
+        "municipios_stats": municipios_stats,
+    }
+
+    return Response(data)
